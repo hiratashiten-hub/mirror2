@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鏡アプリ</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --surface-0: #f5f4f0;
+    --surface-1: #f0efe9;
+    --surface-2: #ffffff;
+    --text-primary: #1a1a18;
+    --text-secondary: #5a5a56;
+    --text-muted: #9a9a94;
+    --border: rgba(0,0,0,0.1);
+    --border-strong: rgba(0,0,0,0.18);
+    --radius: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-0: #1a1a18;
+      --surface-1: #252522;
+      --surface-2: #2e2e2b;
+      --text-primary: #f0efe9;
+      --text-secondary: #a8a8a0;
+      --text-muted: #6a6a64;
+      --border: rgba(255,255,255,0.1);
+      --border-strong: rgba(255,255,255,0.18);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: var(--surface-0);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    width: 100%;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--surface-2);
+  }
+  .rainbow-icon {
+    font-size: 22px;
+    line-height: 1;
+  }
+  .app-title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+  .app {
+    width: 100%;
+    max-width: 560px;
+    padding: 1.5rem 1.25rem 3rem;
+  }
+  .progress {
+    height: 3px;
+    background: var(--surface-1);
+    border-radius: 2px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #7F77DD, #5DCAA5, #EF9F27, #D4537E);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .step { display: none; }
+  .step.active { display: block; }
+  .heading {
+    font-size: 20px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    line-height: 1.4;
+  }
+  .sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+  }
+  .tags-wrap { margin-bottom: 12px; }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-2);
+    border: 0.5px solid var(--border);
+    border-radius: 20px;
+    padding: 7px 15px;
+    font-size: 14px;
+    margin: 5px 4px;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tag:hover { border-color: var(--border-strong); }
+  .tag.selected { background: #EEEDFE; border-color: #AFA9EC; color: #3C3489; }
+  .custom-row { display: flex; gap: 8px; margin-top: 12px; }
+  .custom-row input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+  .custom-row input:focus { outline: none; border-color: #7F77DD; }
+  .btn {
+    padding: 11px 24px;
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border-strong);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:hover { background: var(--surface-1); }
+  .btn-primary { background: #534AB7; border-color: #534AB7; color: white; }
+  .btn-primary:hover { background: #3C3489; }
+  .btn-row { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 8px; }
+  .check-header {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .check-col-label { font-size: 12px; color: var(--text-muted); text-align: center; }
+  .check-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .check-row span { font-size: 14px; }
+  .check-row input[type=radio] { cursor: pointer; width: 18px; height: 18px; display: block; margin: 0 auto; }
+  .alert {
+    background: #EEEDFE;
+    border-radius: 12px;
+    padding: 1.25rem;
+    border: 0.5px solid #AFA9EC;
+    margin-bottom: 1rem;
+  }
+  .alert-title { font-size: 15px; font-weight: 500; color: #3C3489; margin-bottom: 4px; }
+  .alert-body { font-size: 13px; color: #534AB7; line-height: 1.6; }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+  .stat-card {
+    background: var(--surface-2);
+    border-radius: 12px;
+    border: 0.5px solid var(--border);
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-num { font-size: 28px; font-weight: 500; color: #534AB7; }
+  .mirror-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 14px;
+  }
+  .reframe-card {
+    background: var(--surface-2);
+    border-radius: 12px;
+    border: 0.5px solid var(--border);
+    padding: 1.25rem;
+    margin-bottom: 12px;
+  }
+  .reframe-trait { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+  .reframe-prompt { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+  .reframe-card textarea {
+    width: 100%;
+    font-size: 13px;
+    min-height: 64px;
+    resize: none;
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font-family: inherit;
+    line-height: 1.6;
+  }
+  .reframe-card textarea:focus { outline: none; border-color: #7F77DD; }
+  .release-center {
+    text-align: center;
+    padding: 2rem 1rem 1.5rem;
+  }
+  .release-rainbow { font-size: 44px; margin-bottom: 1rem; }
+  .release-title { font-size: 20px; font-weight: 500; margin-bottom: 10px; }
+  .release-body { font-size: 14px; color: var(--text-secondary); line-height: 1.8; }
+  .release-list { margin-top: 1.5rem; }
+  .release-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .release-item-name { font-weight: 500; color: var(--text-primary); min-width: 110px; flex-shrink: 0; }
+  .closing {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface-1);
+    border-radius: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="rainbow-icon">🌈</span>
+  <span class="app-title">鏡</span>
+</header>
+
+<div class="app">
+  <div class="progress"><div class="progress-bar" id="progress" style="width:0%"></div></div>
+
+  <div class="step active" id="step1">
+    <div class="heading">他の人を見ていて、気になることは？</div>
+    <div class="sub">正直に選んでください。思い当たるものを全部。</div>
+    <div class="tags-wrap" id="tags1"></div>
+    <div class="custom-row">
+      <input type="text" id="custom1" placeholder="他にある場合は入力..." />
+      <button class="btn" onclick="addCustom()">追加</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="goStep2()">次へ →</button>
+    </div>
+  </div>
+
+  <div class="step" id="step2">
+    <div class="heading">自分はどうですか？</div>
+    <div class="sub">さっき選んだことを、自分もやることがあるか確認してみてください。</div>
+    <div class="check-header">
+      <span></span>
+      <span class="check-col-label">自分もある</span>
+      <span class="check-col-label">ほぼない</span>
+    </div>
+    <div id="self-check"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="goStep1()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goStep3()">鏡を見る →</button>
+    </div>
+  </div>
+
+  <div class="step" id="step3">
+    <div id="mirror-reveal"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="goStep2()">← 戻る</button>
+      <button class="btn btn-primary" id="next3btn" onclick="goStep4()">次へ →</button>
+    </div>
+  </div>
+
+  <div class="step" id="step4">
+    <div class="heading">その特性が、役に立ったことは？</div>
+    <div class="sub">自分の中にもあるとわかった特性。それが助けになった場面を、思い出せますか。<br>思い当たらなければ、空欄でも大丈夫です。</div>
+    <div id="reframe-list"></div>
+    <div class="btn-row">
+      <button class="btn" onclick="goStep3()">← 戻る</button>
+      <button class="btn btn-primary" onclick="goStep5()">手放す →</button>
+    </div>
+  </div>
+
+  <div class="step" id="step5">
+    <div id="release-content"></div>
+    <div style="text-align:center; margin-top:2rem;">
+      <button class="btn" onclick="reset()">もう一度やってみる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const presets = [
+  "返信が遅い","時間を守らない","話を聞いていない","約束を忘れる",
+  "自分の話ばかりする","感謝を言わない","すぐ否定する","気分で態度が変わる",
+  "謝らない","細かいことを気にしすぎる","優柔不断","批判的なことを言う"
+];
+
+let selected = [];
+let selfCheck = {};
+let matches = [];
+let goodMemory = {};
+
+function renderTags() {
+  const c = document.getElementById('tags1');
+  c.innerHTML = '';
+  presets.forEach(t => {
+    const el = document.createElement('span');
+    el.className = 'tag' + (selected.includes(t) ? ' selected' : '');
+    el.textContent = t + (selected.includes(t) ? ' ✓' : '');
+    el.onclick = () => toggleTag(t);
+    c.appendChild(el);
+  });
+}
+
+function toggleTag(t) {
+  selected.includes(t) ? selected = selected.filter(x => x !== t) : selected.push(t);
+  renderTags();
+}
+
+function addCustom() {
+  const inp = document.getElementById('custom1');
+  const v = inp.value.trim();
+  if (v && !selected.includes(v)) { selected.push(v); presets.push(v); inp.value = ''; renderTags(); }
+}
+
+function goStep2() {
+  if (!selected.length) { alert('ひとつ以上選んでください'); return; }
+  selfCheck = {};
+  selected.forEach(t => selfCheck[t] = null);
+  const c = document.getElementById('self-check');
+  c.innerHTML = '';
+  selected.forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'check-row';
+    const id = 'sc_' + Math.random().toString(36).slice(2);
+    row.innerHTML = `<span>${t}</span>
+      <span><input type="radio" name="${id}" value="yes" onchange="setSelf('${t}','yes')"></span>
+      <span><input type="radio" name="${id}" value="no" onchange="setSelf('${t}','no')"></span>`;
+    c.appendChild(row);
+  });
+  show('step2'); prog(25);
+}
+
+function setSelf(t, v) { selfCheck[t] = v; }
+
+function goStep1() { show('step1'); prog(0); }
+
+function goStep3() {
+  if (selected.some(t => selfCheck[t] === null)) { alert('全部に答えてみてください'); return; }
+  matches = selected.filter(t => selfCheck[t] === 'yes');
+  const c = document.getElementById('mirror-reveal');
+  c.innerHTML = '';
+  if (!matches.length) {
+    c.innerHTML = `<div style="padding:1.5rem;background:var(--surface-2);border-radius:12px;border:0.5px solid var(--border);"><div class="heading">今回は一致なし</div><div class="sub">「気になる」という感覚自体に、何かヒントがあるかもしれません。</div></div>`;
+    document.getElementById('next3btn').style.display = 'none';
+  } else {
+    document.getElementById('next3btn').style.display = '';
+    const a = document.createElement('div');
+    a.className = 'alert';
+    a.innerHTML = `<div class="alert-title">そっか、だから気になってたんだ</div><div class="alert-body">気になっていた ${selected.length} 個のうち、<strong>${matches.length} 個</strong>は自分の中にもありました。</div>`;
+    c.appendChild(a);
+    const g = document.createElement('div');
+    g.className = 'stat-grid';
+    g.innerHTML = `<div class="stat-card"><div class="stat-label">気になっていたこと</div><div class="stat-num">${selected.length}</div></div>
+      <div class="stat-card"><div class="stat-label">自分にもあること</div><div class="stat-num">${matches.length}</div></div>`;
+    c.appendChild(g);
+    matches.forEach(t => {
+      const r = document.createElement('div');
+      r.className = 'mirror-row';
+      r.innerHTML = `<span style="font-size:18px;flex-shrink:0;">🪞</span><span>${t}</span>`;
+      c.appendChild(r);
+    });
+  }
+  show('step3'); prog(50);
+}
+
+function goStep4() {
+  goodMemory = {};
+  const c = document.getElementById('reframe-list');
+  c.innerHTML = '';
+  matches.forEach(t => {
+    goodMemory[t] = '';
+    const card = document.createElement('div');
+    card.className = 'reframe-card';
+    card.innerHTML = `<div class="reframe-trait">${t}</div>
+      <div class="reframe-prompt">この特性があって、助かったことや、うまくいったことは？</div>
+      <textarea placeholder="例：じっくり考えたことで、大事な判断を間違えなかった..."></textarea>`;
+    card.querySelector('textarea').oninput = function() { goodMemory[t] = this.value; };
+    c.appendChild(card);
+  });
+  show('step4'); prog(75);
+}
+
+function goStep5() {
+  const c = document.getElementById('release-content');
+  c.innerHTML = '';
+  const top = document.createElement('div');
+  top.className = 'release-center';
+  top.innerHTML = `<div class="release-rainbow">🌈</div>
+    <div class="release-title">気にならなくなっていく</div>
+    <div class="release-body">その特性は、あなたの中にもある。<br>だから見えていた。それだけのことです。</div>`;
+  c.appendChild(top);
+  const withMemo = matches.filter(t => goodMemory[t] && goodMemory[t].trim());
+  if (withMemo.length) {
+    const list = document.createElement('div');
+    list.className = 'release-list';
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:12px;color:var(--text-muted);margin-bottom:4px;';
+    lbl.textContent = 'あなたの中で、その特性が生きた場面';
+    list.appendChild(lbl);
+    withMemo.forEach(t => {
+      const r = document.createElement('div');
+      r.className = 'release-item';
+      r.innerHTML = `<span class="release-item-name">${t}</span><span>${goodMemory[t]}</span>`;
+      list.appendChild(r);
+    });
+    c.appendChild(list);
+  }
+  const cl = document.createElement('div');
+  cl.className = 'closing';
+  cl.textContent = '他者を通して、自分を知る。それがここでできることです。';
+  c.appendChild(cl);
+  show('step5'); prog(100);
+}
+
+function show(id) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function prog(v) { document.getElementById('progress').style.width = v + '%'; }
+
+function reset() {
+  selected = []; selfCheck = {}; matches = []; goodMemory = {};
+  document.getElementById('next3btn').style.display = '';
+  renderTags(); show('step1'); prog(0);
+}
+
+renderTags();
+</script>
+</body>
+</html>
